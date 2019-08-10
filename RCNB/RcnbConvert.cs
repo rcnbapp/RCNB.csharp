@@ -46,7 +46,6 @@ namespace RCNB
 
         private static void EncodeShort(int s, char[] dest, ref int index)
         {
-            if (s > 0xFFFF) throw new RcnbOverflowException("rcnb overflow");
             var reverse = false;
             if (s > 0x7FFF)
             {
