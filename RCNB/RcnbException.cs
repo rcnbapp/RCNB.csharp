@@ -2,6 +2,9 @@
 
 namespace RCNB
 {
+    /// <summary>
+    /// This exception is thrown when RC is too NB.
+    /// </summary>
 
     //[System.Serializable]
     public class RcnbException : Exception

@@ -12,10 +12,10 @@ namespace RCNB
         private const string cb = "bBƀƁƃƄƅßÞþ";
 
         // size
-        private static readonly int sr = cr.Length;
-        private static readonly int sc = cc.Length;
-        private static readonly int sn = cn.Length;
-        private static readonly int sb = cb.Length;
+        private static readonly int sr = cr.Length; // 15
+        private static readonly int sc = cc.Length; // 15
+        private static readonly int sn = cn.Length; // 15
+        private static readonly int sb = cb.Length; // 10
         private static readonly int src = sr * sc;
         private static readonly int snb = sn * sb;
         private static readonly int scnb = sc * snb;
@@ -27,24 +27,26 @@ namespace RCNB
             right = temp;
         }
 
-        private static void EncodeByte(byte b, char[] dest, ref int index)
+        private static void EncodeByte(byte b, Span<char> dest, ref int index)
         {
             int i = b;
-            char[] result;
+            Span<char> result = stackalloc char[2];
             if (i > 0x7F)
             {
                 i = i & 0x7F;
-                result = new[] { cn[i / sb], cb[i % sb] };
+                result[0] = cn[i / sb];
+                result[1] = cb[i % sb];
             }
             else
             {
-                result = new[] { cr[i / sc], cc[i % sc] };
+                result[0] = cr[i / sc];
+                result[1] = cc[i % sc];
             }
-            Array.Copy(result, 0, dest, index, result.Length);
+            result.CopyTo(dest.Slice(index));
             index += result.Length;
         }
 
-        private static void EncodeShort(int s, char[] dest, ref int index)
+        private static void EncodeShort(int s, Span<char> dest, ref int index)
         {
             var reverse = false;
             if (s > 0x7FFF)
@@ -52,14 +54,14 @@ namespace RCNB
                 reverse = true;
                 s = s & 0x7FFF;
             }
-            var resultIndexArray = new[]
+            Span<int> resultIndexArray = stackalloc[]
             {
                 s / scnb,
                 (s % scnb) / snb,
                 (s % snb) / sb,
                 s % sb,
             };
-            var resultArray = new[]
+            Span<char> resultArray = stackalloc[]
             {
                 cr[resultIndexArray[0]],
                 cc[resultIndexArray[1]],
@@ -71,14 +73,14 @@ namespace RCNB
                 Swap(ref resultArray[0], ref resultArray[2]);
                 Swap(ref resultArray[1], ref resultArray[3]);
             }
-            Array.Copy(resultArray, 0, dest, index, resultArray.Length);
+            resultArray.CopyTo(dest.Slice(index));
             index += resultArray.Length;
         }
 
-        private static void EncodeTwoBytes(byte[] inArray, int i, char[] dest, ref int index)
+        private static void EncodeTwoBytes(ReadOnlySpan<byte> inArray, int i, Span<char> dest, ref int index)
             => EncodeShort((inArray[i] << 8) | inArray[i + 1], dest, ref index);
 
-        private static int CalculateLength(byte[] inArray)
+        private static int CalculateLength(ReadOnlySpan<byte> inArray)
         {
             checked
             {
@@ -86,9 +88,8 @@ namespace RCNB
             }
         }
 
-        public static string ToRcnbString(byte[] inArray)
+        private static void EncodeRcnb(Span<char> resultArray, ReadOnlySpan<byte> inArray)
         {
-            char[] resultArray = new char[CalculateLength(inArray)];
             int resultIndex = 0;
             for (var i = 0; i < inArray.Length >> 1; i++)
             {
@@ -99,7 +100,27 @@ namespace RCNB
                 EncodeByte(inArray[inArray.Length - 1], resultArray, ref resultIndex);
             }
             Debug.Assert(resultIndex == resultArray.Length);
+        }
+
+#if NETSTANDARD1_1
+        public static string ToRcnbString(ReadOnlySpan<byte> inArray)
+        {
+            int length = CalculateLength(inArray);
+            char[] resultArray = new char[length];
+            EncodeRcnb(resultArray, inArray);
             return new string(resultArray);
         }
+#else
+        /// <summary>
+        /// Encode content to RCNB.
+        /// </summary>
+        /// <param name="inArray">Content to encode.</param>
+        /// <returns>The encoded content.</returns>
+        public static string ToRcnbString(ReadOnlyMemory<byte> inArray)
+        {
+            int length = CalculateLength(inArray.Span);
+            return string.Create(length, inArray, (span, a) => EncodeRcnb(span, a.Span));
+        }
+#endif
     }
 }
