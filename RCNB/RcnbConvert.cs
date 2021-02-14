@@ -122,5 +122,70 @@ namespace RCNB
             return string.Create(length, inArray, (span, a) => EncodeRcnb(span, a.Span));
         }
 #endif
+
+        private static int DecodeShort(ReadOnlySpan<char> source, Span<byte> dest)
+        {
+            var reverse = cr.IndexOf(source[0]) < 0;
+            Span<int> idx = !reverse
+                ? stackalloc int[] { cr.IndexOf(source[0]), cc.IndexOf(source[1]), cn.IndexOf(source[2]), cb.IndexOf(source[3]) }
+                : stackalloc int[] { cr.IndexOf(source[2]), cc.IndexOf(source[3]), cn.IndexOf(source[0]), cb.IndexOf(source[1]) };
+            if (idx[0] < 0 || idx[1] < 0 || idx[2] < 0 || idx[3] < 0)
+                throw new FormatException("not rcnb");
+            var result = idx[0] * scnb + idx[1] * snb + idx[2] * sb + idx[3];
+            if (result > 0x7FFF)
+                throw new FormatException("rcnb overflow");
+            result = reverse ? result | 0x8000 : result;
+            dest[0] = (byte)(result >> 8);
+            dest[1] = (byte)(result & 0xff);
+            return 2;
+        }
+
+        private static int DecodeByte(ReadOnlySpan<char> source, Span<byte> dest)
+        {
+            var nb = false;
+            Span<int> idx = stackalloc int[] { cr.IndexOf(source[0]), cc.IndexOf(source[1]) };
+            if (idx[0] < 0 || idx[1] < 0)
+            {
+                idx[0] = cn.IndexOf(source[0]);
+                idx[1] = cb.IndexOf(source[1]);
+                nb = true;
+            }
+            if (idx[0] < 0 || idx[1] < 0)
+                throw new FormatException("not rc/nb");
+            var result = nb ? idx[0] * sb + idx[1] : idx[0] * sc + idx[1];
+            if (result > 0x7F)
+                throw new FormatException("rc/nb overflow");
+            result = nb ? result | 0x80 : result;
+            dest[0] = (byte)result;
+            return 1;
+        }
+
+        private static void FromRcnbString(ReadOnlySpan<char> str, Span<byte> dest)
+        {
+            if (str.Length / 2 != dest.Length)
+                throw new ArgumentException("The length of destination is not apt.", nameof(dest));
+            if ((str.Length & 1) != 0)
+                throw new FormatException("invalid length.");
+
+            var index = 0;
+            for (var i = 0; i < (str.Length >> 2); i++)
+            {
+                var l = DecodeShort(str.Slice(i * 4, 4), dest.Slice(index));
+                index += l;
+            }
+            if ((str.Length & 2) != 0)
+            {
+                var l = DecodeByte(str.Slice(str.Length - 2, 2), dest.Slice(index));
+                index += l;
+            }
+            Debug.Assert(index == dest.Length);
+        }
+
+        public static byte[] FromRcnbString(ReadOnlySpan<char> str)
+        {
+            byte[] result = new byte[str.Length / 2];
+            FromRcnbString(str, result);
+            return result;
+        }
     }
 }
