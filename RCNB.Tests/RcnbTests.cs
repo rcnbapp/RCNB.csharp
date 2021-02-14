@@ -9,12 +9,14 @@ namespace RCNB.Tests
         [Theory]
         [InlineData("rcnb", "ɌcńƁȓČņÞ")]
         [InlineData("我爱你", "ȵÞȒčƝƁŔcǹƄrȼȠþȒĊńƀ")]
-        public void EncodeTest(string s, string rcnb)
+        public void Test(string s, string rcnb)
         {
             var array = Encoding.UTF8.GetBytes(s);
-            string result = RcnbConvert.ToRcnbString(array);
+            string encodeResult = RcnbConvert.ToRcnbString(array);
+            Assert.Equal(rcnb, encodeResult);
 
-            Assert.Equal(rcnb, result);
+            var decodeResult = RcnbConvert.FromRcnbString(rcnb);
+            Assert.Equal(s, Encoding.UTF8.GetString(decodeResult));
         }
     }
 }
