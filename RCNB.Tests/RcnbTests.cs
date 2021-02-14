@@ -1,17 +1,20 @@
 using System;
+using System.Text;
 using Xunit;
 
 namespace RCNB.Tests
 {
     public class RcnbTests
     {
-        [Fact]
-        public void EncodeTest()
+        [Theory]
+        [InlineData("rcnb", "ɌcńƁȓČņÞ")]
+        [InlineData("我爱你", "ȵÞȒčƝƁŔcǹƄrȼȠþȒĊńƀ")]
+        public void EncodeTest(string s, string rcnb)
         {
-            var array = new byte[] { 114, 99, 110, 98 };
+            var array = Encoding.UTF8.GetBytes(s);
             string result = RcnbConvert.ToRcnbString(array);
 
-            Assert.Equal("ɌcńƁȓČņÞ", result);
+            Assert.Equal(rcnb, result);
         }
     }
 }
