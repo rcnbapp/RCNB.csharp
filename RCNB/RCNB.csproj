@@ -13,6 +13,11 @@
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>RCNB.csharp</AssemblyName>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>bleatingsheep</Authors>
+    <PackageProjectUrl></PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rcnbapp/RCNB.csharp</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.1'">
