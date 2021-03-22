@@ -120,19 +120,20 @@ namespace RCNB
         public static unsafe string ToRcnbString(ReadOnlySpan<byte> inArray)
         {
             int length = CalculateLength(inArray);
-            fixed (byte* data = &inArray.GetPinnableReference())
+            //fixed (byte* data = &inArray.GetPinnableReference())
+            fixed (byte* data = inArray) // it seems to work?
             {
                 return string.Create(length,
-                    new ByteMemoryInfo(data, inArray.Length),
+                    new ByteMemoryMedium(data, inArray.Length),
                     (span, a) => EncodeRcnb(span, new ReadOnlySpan<byte>(a.Pointer, a.Length)));
             }
         }
 
-        private unsafe readonly struct ByteMemoryInfo
+        private unsafe readonly struct ByteMemoryMedium
         {
-            public ByteMemoryInfo(byte* location, int length)
+            public ByteMemoryMedium(byte* pointer, int length)
             {
-                Pointer = location;
+                Pointer = pointer;
                 Length = length;
             }
 

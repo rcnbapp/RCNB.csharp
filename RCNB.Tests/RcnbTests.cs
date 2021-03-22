@@ -15,6 +15,9 @@ namespace RCNB.Tests
             Assert.Equal(rcnb, RcnbConvert.ToRcnbString(array));
             Assert.Equal(rcnb, RcnbConvert.ToRcnbString(array.AsSpan()));
             Assert.Equal(rcnb, RcnbConvert.ToRcnbString(array.AsMemory()));
+            Span<byte> span = stackalloc byte[array.Length];
+            array.CopyTo(span);
+            Assert.Equal(rcnb, RcnbConvert.ToRcnbString(span));
 
             var decodeResult = RcnbConvert.FromRcnbString(rcnb);
             Assert.Equal(s, Encoding.UTF8.GetString(decodeResult));
