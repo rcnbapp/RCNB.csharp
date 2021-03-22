@@ -12,8 +12,9 @@ namespace RCNB.Tests
         public void Test(string s, string rcnb)
         {
             var array = Encoding.UTF8.GetBytes(s);
-            string encodeResult = RcnbConvert.ToRcnbString(array);
-            Assert.Equal(rcnb, encodeResult);
+            Assert.Equal(rcnb, RcnbConvert.ToRcnbString(array));
+            Assert.Equal(rcnb, RcnbConvert.ToRcnbString(array.AsSpan()));
+            Assert.Equal(rcnb, RcnbConvert.ToRcnbString(array.AsMemory()));
 
             var decodeResult = RcnbConvert.FromRcnbString(rcnb);
             Assert.Equal(s, Encoding.UTF8.GetString(decodeResult));
