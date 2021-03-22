@@ -122,7 +122,7 @@ namespace RCNB
             fixed (byte* data = &inArray.GetPinnableReference())
             {
                 return string.Create(length,
-                    new ByteMemoryInfo(data, length),
+                    new ByteMemoryInfo(data, inArray.Length),
                     (span, a) => EncodeRcnb(span, new ReadOnlySpan<byte>(a.Pointer, a.Length)));
             }
         }
