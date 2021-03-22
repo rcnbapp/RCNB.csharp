@@ -48,6 +48,7 @@ namespace RCNB
 
         private static void EncodeShort(int s, Span<char> dest, ref int index)
         {
+            Debug.Assert(s <= 0xFFFF);
             var reverse = false;
             if (s > 0x7FFF)
             {
