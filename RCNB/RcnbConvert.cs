@@ -102,7 +102,12 @@ namespace RCNB
             Debug.Assert(resultIndex == resultArray.Length);
         }
 
-#if NETSTANDARD1_1
+        /// <summary>
+        /// Encode RCNB.
+        /// </summary>
+        /// <param name="inArray">Data to encode.</param>
+        /// <returns>Encoded RCNB string.</returns>
+#if NETSTANDARD1_1 || NETSTANDARD2_0
         public static string ToRcnbString(ReadOnlySpan<byte> inArray)
         {
             int length = CalculateLength(inArray);
@@ -111,6 +116,29 @@ namespace RCNB
             return new string(resultArray);
         }
 #else
+        public static unsafe string ToRcnbString(ReadOnlySpan<byte> inArray)
+        {
+            int length = CalculateLength(inArray);
+            fixed (byte* data = &inArray.GetPinnableReference())
+            {
+                return string.Create(length,
+                    new ByteMemoryInfo(data, length),
+                    (span, a) => EncodeRcnb(span, new ReadOnlySpan<byte>(a.Pointer, a.Length)));
+            }
+        }
+
+        private unsafe readonly struct ByteMemoryInfo
+        {
+            public ByteMemoryInfo(byte* location, int length)
+            {
+                Pointer = location;
+                Length = length;
+            }
+
+            public byte* Pointer { get; }
+            public int Length { get; }
+        }
+
         /// <summary>
         /// Encode content to RCNB.
         /// </summary>
@@ -121,6 +149,13 @@ namespace RCNB
             int length = CalculateLength(inArray.Span);
             return string.Create(length, inArray, (span, a) => EncodeRcnb(span, a.Span));
         }
+
+        /// <summary>
+        /// Encode content to RCNB.
+        /// </summary>
+        /// <param name="inArray">Content to encode.</param>
+        /// <returns>The encoded content.</returns>
+        public static string ToRcnbString(byte[] inArray) => ToRcnbString(inArray.AsMemory());
 #endif
 
         private static int DecodeShort(ReadOnlySpan<char> source, Span<byte> dest)
@@ -181,6 +216,11 @@ namespace RCNB
             Debug.Assert(index == dest.Length);
         }
 
+        /// <summary>
+        /// Decode RCNB string.
+        /// </summary>
+        /// <param name="str">RCNB string.</param>
+        /// <returns>Decoded data.</returns>
         public static byte[] FromRcnbString(ReadOnlySpan<char> str)
         {
             byte[] result = new byte[str.Length / 2];
