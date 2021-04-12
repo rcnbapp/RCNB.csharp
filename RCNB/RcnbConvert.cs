@@ -197,12 +197,18 @@ namespace RCNB
             return 1;
         }
 
-        private static void FromRcnbString(ReadOnlySpan<char> str, Span<byte> dest)
+        /// <summary>
+        /// Decode RCNB char span, saving result to given span.
+        /// </summary>
+        /// <param name="str">RCNB char span.</param>
+        /// <param name="dest">Where to store result.</param>
+        /// <returns>Decoded count of bytes.</returns>
+        public static int FromRcnbString(ReadOnlySpan<char> str, Span<byte> dest)
         {
-            if (str.Length / 2 != dest.Length)
-                throw new ArgumentException("The length of destination is not apt.", nameof(dest));
+            if (str.Length / 2 > dest.Length)
+                throw new ArgumentException("The length of destination is not enough.", nameof(dest));
             if ((str.Length & 1) != 0)
-                throw new FormatException("invalid length.");
+                throw new FormatException("The length of RCNB string is not valid.");
 
             var index = 0;
             for (var i = 0; i < (str.Length >> 2); i++)
@@ -215,7 +221,7 @@ namespace RCNB
                 var l = DecodeByte(str.Slice(str.Length - 2, 2), dest.Slice(index));
                 index += l;
             }
-            Debug.Assert(index == dest.Length);
+            return index;
         }
 
         /// <summary>
@@ -226,7 +232,8 @@ namespace RCNB
         public static byte[] FromRcnbString(ReadOnlySpan<char> str)
         {
             byte[] result = new byte[str.Length / 2];
-            FromRcnbString(str, result);
+            var decodedLength = FromRcnbString(str, result);
+            Debug.Assert(result.Length == decodedLength);
             return result;
         }
 
