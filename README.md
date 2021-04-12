@@ -17,3 +17,8 @@ using RCNB;
 RcnbConvert.ToRcnbString(new byte[] { 114, 99, 110, 98 }); // "ɌcńƁȓČņÞ"
 RcnbConvert.FromRcnbString("ɌcńƁȓČņÞ"); // byte[] { 114, 99, 110, 98 }
 ```
+
+## Example
+https://rcnb.b11p.com
+
+Blazor Webassembly App for RCNB encoding and decoding online.
