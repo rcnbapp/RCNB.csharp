@@ -229,5 +229,19 @@ namespace RCNB
             FromRcnbString(str, result);
             return result;
         }
+
+#if NETSTANDARD1_1 || NETSTANDARD2_0
+        /// <summary>
+        /// Decode RCNB string.
+        /// </summary>
+        /// <param name="str">RCNB string.</param>
+        /// <returns>Decoded data.</returns>
+        public static byte[] FromRcnbString(string str)
+        {
+            byte[] result = new byte[str.Length / 2];
+            FromRcnbString(str.AsSpan(), result);
+            return result;
+        }
+#endif
     }
 }
