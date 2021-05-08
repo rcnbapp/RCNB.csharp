@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace RCNB
 {
@@ -12,14 +13,15 @@ namespace RCNB
         private const string cb = "bBƀƁƃƄƅßÞþ";
 
         // size
-        private static readonly int sr = cr.Length; // 15
-        private static readonly int sc = cc.Length; // 15
-        private static readonly int sn = cn.Length; // 15
-        private static readonly int sb = cb.Length; // 10
-        private static readonly int src = sr * sc;
-        private static readonly int snb = sn * sb;
-        private static readonly int scnb = sc * snb;
+        private const int sr = 15; // cr.Length;
+        private const int sc = 15; // cc.Length;
+        private const int sn = 15; // cn.Length;
+        private const int sb = 10; // cb.Length;
+        private const int src = sr * sc;
+        private const int snb = sn * sb;
+        private const int scnb = sc * snb;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void Swap<T>(ref T left, ref T right)
         {
             T temp = left;
@@ -27,105 +29,136 @@ namespace RCNB
             right = temp;
         }
 
-        private static void EncodeByte(byte b, Span<char> dest, ref int index)
+        private unsafe static void EncodeFinalByte(byte inByte, char* outChars)
         {
-            int i = b;
-            Span<char> result = stackalloc char[2];
-            if (i > 0x7F)
+            fixed (char* pr = cr)
+            fixed (char* pc = cc)
+            fixed (char* pn = cn)
+            fixed (char* pb = cb)
             {
-                i = i & 0x7F;
-                result[0] = cn[i / sb];
-                result[1] = cb[i % sb];
+                int i = inByte;
+                if (i > 0x7F)
+                {
+                    i &= 0x7F;
+                    outChars[0] = pn[i / sb];
+                    outChars[1] = pb[i % sb];
+                }
+                else
+                {
+                    outChars[0] = pr[i / sc];
+                    outChars[1] = pc[i % sc];
+                }
             }
-            else
-            {
-                result[0] = cr[i / sc];
-                result[1] = cc[i % sc];
-            }
-            result.CopyTo(dest.Slice(index));
-            index += result.Length;
         }
 
-        private static void EncodeShort(int s, Span<char> dest, ref int index)
+        /// <summary>
+        /// Encode RCNB, storing results to given location.
+        /// </summary>
+        /// <param name="inData"></param>
+        /// <param name="outChars"></param>
+        /// <param name="n">Bytes to encode.</param>
+        private unsafe static void EncodeRcnb(byte* inData, char* outChars, int n)
         {
-            Debug.Assert(s <= 0xFFFF);
-            var reverse = false;
-            if (s > 0x7FFF)
+            // avoid unnecessary range checking
+            fixed (char* pr = cr)
+            fixed (char* pc = cc)
+            fixed (char* pn = cn)
+            fixed (char* pb = cb)
             {
-                reverse = true;
-                s = s & 0x7FFF;
+                Span<int> resultIndexArray = stackalloc int[4];
+                for (int i = 0; i < n >> 1; i++)
+                {
+                    int s = (inData[0] << 8) | inData[1];
+
+                    Debug.Assert(s <= 0xFFFF);
+                    var reverse = false;
+                    if (s > 0x7FFF)
+                    {
+                        reverse = true;
+                        s &= 0x7FFF;
+                    }
+#if NETSTANDARD1_1
+                    resultIndexArray[0] = s / scnb;
+                    resultIndexArray[1] = (s % scnb) / snb;
+                    resultIndexArray[2] = (s % snb) / sb;
+                    resultIndexArray[3] = s % sb;
+#else
+                    int temp;
+                    resultIndexArray[0] = Math.DivRem(s, scnb, out temp);
+                    resultIndexArray[1] = Math.DivRem(temp, snb, out temp);
+                    resultIndexArray[2] = Math.DivRem(temp, sb, out temp);
+                    resultIndexArray[3] = temp;
+#endif
+                    outChars[0] = pr[resultIndexArray[0]];
+                    outChars[1] = pc[resultIndexArray[1]];
+                    outChars[2] = pn[resultIndexArray[2]];
+                    outChars[3] = pb[resultIndexArray[3]];
+                    if (reverse)
+                    {
+                        Swap(ref outChars[0], ref outChars[2]);
+                        Swap(ref outChars[1], ref outChars[3]);
+                    }
+
+                    inData += 2;
+                    outChars += 4;
+                }
+                if ((n & 1) != 0)
+                {
+                    EncodeFinalByte(*inData, outChars);
+                }
             }
-            Span<int> resultIndexArray = stackalloc[]
-            {
-                s / scnb,
-                (s % scnb) / snb,
-                (s % snb) / sb,
-                s % sb,
-            };
-            Span<char> resultArray = stackalloc[]
-            {
-                cr[resultIndexArray[0]],
-                cc[resultIndexArray[1]],
-                cn[resultIndexArray[2]],
-                cb[resultIndexArray[3]],
-            };
-            if (reverse)
-            {
-                Swap(ref resultArray[0], ref resultArray[2]);
-                Swap(ref resultArray[1], ref resultArray[3]);
-            }
-            resultArray.CopyTo(dest.Slice(index));
-            index += resultArray.Length;
         }
 
-        private static void EncodeTwoBytes(ReadOnlySpan<byte> inArray, int i, Span<char> dest, ref int index)
-            => EncodeShort((inArray[i] << 8) | inArray[i + 1], dest, ref index);
-
-        private static int CalculateLength(ReadOnlySpan<byte> inArray)
+        private static int CalculateLength(ReadOnlySpan<byte> bytes)
         {
             checked
             {
-                return inArray.Length * 2;
+                return bytes.Length * 2;
             }
         }
 
-        private static void EncodeRcnb(Span<char> resultArray, ReadOnlySpan<byte> inArray)
+        public unsafe static void EncodeRcnb(ReadOnlySpan<byte> inData, Span<char> outChars)
         {
-            int resultIndex = 0;
-            for (var i = 0; i < inArray.Length >> 1; i++)
+            if (CalculateLength(inData) > outChars.Length)
+                throw new ArgumentOutOfRangeException(nameof(inData), "rcnb overflow, data is too long or dest is too short.");
+            fixed (byte* bytesPtr = inData)
+            fixed (char* charsPtr = outChars)
             {
-                EncodeTwoBytes(inArray, i * 2, resultArray, ref resultIndex);
+                EncodeRcnb(bytesPtr, charsPtr, inData.Length);
             }
-            if ((inArray.Length & 1) != 0)
-            {
-                EncodeByte(inArray[inArray.Length - 1], resultArray, ref resultIndex);
-            }
-            Debug.Assert(resultIndex == resultArray.Length);
         }
 
         /// <summary>
         /// Encode RCNB.
         /// </summary>
-        /// <param name="inArray">Data to encode.</param>
+        /// <param name="inData">Data to encode.</param>
         /// <returns>Encoded RCNB string.</returns>
 #if NETSTANDARD1_1 || NETSTANDARD2_0
-        public static string ToRcnbString(ReadOnlySpan<byte> inArray)
+        public static unsafe string ToRcnbString(ReadOnlySpan<byte> inBytes)
         {
-            int length = CalculateLength(inArray);
-            char[] resultArray = new char[length];
-            EncodeRcnb(resultArray, inArray);
+            int resultLength = CalculateLength(inBytes);
+            char[] resultArray = new char[resultLength];
+            fixed (byte* bytesPtr = inBytes)
+            fixed (char* charsPtr = resultArray)
+            {
+                EncodeRcnb(bytesPtr, charsPtr, inBytes.Length);
+            }
             return new string(resultArray);
         }
 #else
-        public static unsafe string ToRcnbString(ReadOnlySpan<byte> inArray)
+        public static unsafe string ToRcnbString(ReadOnlySpan<byte> inData)
         {
-            int length = CalculateLength(inArray);
+            int length = CalculateLength(inData);
             //fixed (byte* data = &inArray.GetPinnableReference())
-            fixed (byte* data = inArray) // it seems to work?
+            fixed (byte* bytesPtr = inData) // it seems to work? --Yes! It is documented.
             {
                 return string.Create(length,
-                    new ByteMemoryMedium(data, inArray.Length),
-                    (span, a) => EncodeRcnb(span, new ReadOnlySpan<byte>(a.Pointer, a.Length)));
+                    new ByteMemoryMedium(bytesPtr, inData.Length),
+                    (outChars, dataMedium) =>
+                    {
+                        fixed (char* charsPtr = outChars)
+                            EncodeRcnb(dataMedium.Pointer, charsPtr, dataMedium.Length);
+                    });
             }
         }
 
@@ -144,12 +177,17 @@ namespace RCNB
         /// <summary>
         /// Encode content to RCNB.
         /// </summary>
-        /// <param name="inArray">Content to encode.</param>
+        /// <param name="inData">Content to encode.</param>
         /// <returns>The encoded content.</returns>
-        public static string ToRcnbString(ReadOnlyMemory<byte> inArray)
+        public unsafe static string ToRcnbString(ReadOnlyMemory<byte> inData)
         {
-            int length = CalculateLength(inArray.Span);
-            return string.Create(length, inArray, (span, a) => EncodeRcnb(span, a.Span));
+            int length = CalculateLength(inData.Span);
+            return string.Create(length, inData, (outChars, bytes) =>
+            {
+                fixed (byte* bytesPtr = bytes.Span)
+                fixed (char* charsPtr = outChars)
+                    EncodeRcnb(bytesPtr, charsPtr, bytes.Length);
+            });
         }
 
         /// <summary>
