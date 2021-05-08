@@ -8,6 +8,9 @@
 
     public static partial class RcnbAvx2
     {
+        /// <summary>
+        /// Returns whether CPU support AVX2;
+        /// </summary>
         public static bool IsSupported => Avx2.IsSupported;
 
         private static readonly byte[] s_swizzle = new byte[16]
@@ -222,6 +225,9 @@
 #else
     public static partial class RcnbAvx2
     {
+        /// <summary>
+        /// False because AVX2 needs .NET Core 3.1 or above.
+        /// </summary>
         public static bool IsSupported => false;
         internal static unsafe void EncodeRcnb(byte* value_in, char* value_out, nint n)
         {
@@ -229,8 +235,17 @@
         }
     }
 #endif
+    /// <summary>
+    /// AVX2 accelerated encoding class.
+    /// </summary>
     public static partial class RcnbAvx2
     {
+        /// <summary>
+        /// Encodes RCNB.
+        /// </summary>
+        /// <param name="value_in_span"></param>
+        /// <param name="value_out_span"></param>
+        /// <exception cref="PlatformNotSupportedException"></exception>
         public static unsafe void EncodeRcnb(Span<byte> value_in_span, Span<char> value_out_span)
         {
             if (value_out_span.Length < (value_in_span.Length << 1))

@@ -4,6 +4,9 @@ using System.Runtime.CompilerServices;
 
 namespace RCNB
 {
+    /// <summary>
+    /// Encodes and decodes RCNB.
+    /// </summary>
     public static class RcnbConvert
     {
         // char
@@ -117,6 +120,12 @@ namespace RCNB
             }
         }
 
+        /// <summary>
+        /// Encodes RCNB. Stores encoding result to <c>outChars</c>;
+        /// </summary>
+        /// <param name="inData">Data.</param>
+        /// <param name="outChars">Results.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><c>outChars</c> does not have enough space to store the results.</exception>
         public unsafe static void EncodeRcnb(ReadOnlySpan<byte> inData, Span<char> outChars)
         {
             if (CalculateLength(inData) > outChars.Length)
@@ -134,14 +143,14 @@ namespace RCNB
         /// <param name="inData">Data to encode.</param>
         /// <returns>Encoded RCNB string.</returns>
 #if NETSTANDARD1_1 || NETSTANDARD2_0
-        public static unsafe string ToRcnbString(ReadOnlySpan<byte> inBytes)
+        public static unsafe string ToRcnbString(ReadOnlySpan<byte> inData)
         {
-            int resultLength = CalculateLength(inBytes);
+            int resultLength = CalculateLength(inData);
             char[] resultArray = new char[resultLength];
-            fixed (byte* bytesPtr = inBytes)
+            fixed (byte* bytesPtr = inData)
             fixed (char* charsPtr = resultArray)
             {
-                EncodeRcnb(bytesPtr, charsPtr, inBytes.Length);
+                EncodeRcnb(bytesPtr, charsPtr, inData.Length);
             }
             return new string(resultArray);
         }
