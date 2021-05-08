@@ -57,7 +57,7 @@ namespace RCNB
         /// <param name="inData"></param>
         /// <param name="outChars"></param>
         /// <param name="n">Bytes to encode.</param>
-        private unsafe static void EncodeRcnb(byte* inData, char* outChars, int n)
+        internal unsafe static void EncodeRcnb(byte* inData, char* outChars, int n)
         {
             // avoid unnecessary range checking
             fixed (char* pr = cr)
