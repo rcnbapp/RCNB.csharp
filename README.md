@@ -22,3 +22,8 @@ RcnbConvert.FromRcnbString("ɌcńƁȓČņÞ"); // byte[] { 114, 99, 110, 98 }
 https://rcnb.b11p.com
 
 Blazor Webassembly App for RCNB encoding and decoding online.
+
+## Acceleration
+RCNB.csharp supports AVX2 acceleration. It is from [https://github.com/rcnbapp/librcnb](https://github.com/rcnbapp/librcnb) and is MIT licensed as well.
+
+Currently, such acceleration is not applied by default. You can use `RCNB.Acceleration.RcnbAvx2` class to invoke accelerated methods.
