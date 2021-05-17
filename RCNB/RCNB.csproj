@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>C:\Users\yinmi\source\repos\RCNB\RCNB\RCNB.xml</DocumentationFile>
+    <DocumentationFile>RCNB.xml</DocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup>
