@@ -50,7 +50,7 @@ public static partial class RcnbAvx2
         nint encoded = EncodeRcnbInternal(value_in, (byte*)value_out, n);
         value_in += encoded;
         value_out += encoded << 1;
-        RcnbConvert.EncodeRcnb(value_in, value_out, (int)(n - encoded));
+        RcnbSoftware.EncodeRcnb(value_in, value_out, (int)(n - encoded));
     }
 
     private static unsafe nint EncodeRcnbInternal(byte* value_in, byte* value_out, nint n)
