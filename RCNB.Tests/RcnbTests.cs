@@ -34,15 +34,19 @@ namespace RCNB.Tests
         }
 
         [Fact]
-        public void AccelerationTest()
+        public void Avx2Test()
         {
+            if (!RCNB.Implementations.RcnbAvx2.IsSupported)
+            {
+                return; // skipped
+            }
             var random = new Random();
             var data = new byte[10 * 1024 * 1024 + 33];
             random.NextBytes(data);
             var s1 = RcnbConvert.ToRcnbString(data);
             var s2 = string.Create(data.Length * 2, data, (s, d) =>
             {
-                Acceleration.RcnbAvx2.EncodeRcnb(d, s);
+                Implementations.RcnbAvx2.EncodeRcnb(d, s);
             });
             Assert.Equal(s1, s2);
         }
